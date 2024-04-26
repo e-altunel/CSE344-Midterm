@@ -3,9 +3,11 @@
 #include <defines.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <message.h>
 #include <server_request.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -18,13 +20,8 @@ static int   client_fifo_write_fd                = -1;
 static void handle_signal(int signal) {
   (void)signal;
 
+  printf("Client disconnected with PID %d\n", client_pid);
   kill(getppid(), SIGINT);
-  if (client_fifo_read_path[0] != 0) {
-    unlink(client_fifo_read_path);
-  }
-  if (client_fifo_write_path[0] != 0) {
-    unlink(client_fifo_write_path);
-  }
   if (client_pid != 0) {
     kill(client_pid, SIGINT);
   }
@@ -34,6 +31,13 @@ static void handle_signal(int signal) {
   if (client_fifo_write_fd != -1) {
     close(client_fifo_write_fd);
   }
+  if (client_fifo_read_path[0] != 0) {
+    unlink(client_fifo_read_path);
+  }
+  if (client_fifo_write_path[0] != 0) {
+    unlink(client_fifo_write_path);
+  }
+  exit(0);
 }
 
 void handle_client(server_connect_request_t request) {
@@ -45,6 +49,8 @@ void handle_client(server_connect_request_t request) {
 
   sigemptyset(&action.sa_mask);
   sigaction(SIGINT, &action, NULL);
+
+  printf("Client connected with PID %d\n", request.client_pid);
 
   if (snprintf(client_fifo_read_path, BUFFER_SIZE, "%s%dr", CLIENT_FIFO_PATH, request.client_pid) < 0) {
     perror("Failed to create client FIFO read path");
@@ -82,22 +88,35 @@ void handle_client(server_connect_request_t request) {
   }
 
   while (1) {
-    char buffer[BUFFER_SIZE];
-    char message[BUFFER_SIZE] = "Hello, client!";
-    int  return_value;
+    int value = -1;
+    errno     = 0;
 
-    return_value = read(client_fifo_read_fd, buffer, BUFFER_SIZE);
-    if (return_value == -1) {
-      perror("Failed to read from client FIFO");
-      break;
+    value = receive_int(client_fifo_read_fd);
+    if (value == -1) {
+      if (errno != 0) {
+        perror("Failed to read from client FIFO");
+        break;
+      }
     }
-    if (return_value == 0) {
-      break;
-    }
+    printf("Client: %d\n", value);
 
-    if (write(client_fifo_write_fd, message, sizeof(message)) == -1) {
-      perror("Failed to write to client FIFO");
-      break;
+    sleep(1);
+
+    if (value % 2 == 0) {
+      if (send_message(client_fifo_write_fd, "Even") == -1) {
+        perror("Failed to send message");
+        break;
+      }
+      printf("Server: Even\n");
+    } else {
+      if (send_message(client_fifo_write_fd, "Odd") == -1) {
+        perror("Failed to send message");
+        break;
+      }
+      printf("Server: Odd\n");
     }
+  }
+  if (client_pid != 0) {
+    kill(client_pid, SIGINT);
   }
 }

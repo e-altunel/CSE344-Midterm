@@ -8,18 +8,45 @@
 #include <server_request.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
-void print_pid(size_t index, pid_t pid) {
-  printf("PID at index %ld: %d\n", index, pid);
+static pid_array_t pids           = {0};
+static int         server_fifo_fd = -1;
+
+static void kill_kids(size_t index, pid_t pid) {
+  (void)index;
+  kill(pid, SIGINT);
+}
+
+static void handle_signal(int signal) {
+  (void)signal;
+  printf("Server disconnected\n");
+
+  if (server_fifo_fd != -1) {
+    close(server_fifo_fd);
+  }
+  pid_array_map(pids, kill_kids);
+  pid_array_destroy(pids);
+  unlink(SERVER_FIFO_PATH);
+
+  while (wait(NULL) != -1) {
+  }
+
+  exit(0);
 }
 
 int main() {
-  pid_array_t pids = pid_array_create(10);
-  int         server_fifo_fd;
-  time_t      last_read;
+  time_t last_read;
+
+  struct sigaction action = {0};
+  action.sa_handler       = handle_signal;
+
+  sigemptyset(&action.sa_mask);
+  sigaction(SIGINT, &action, NULL);
 
   if (mkfifo(SERVER_FIFO_PATH, 0666) == -1 && errno != EEXIST) {
     perror("Failed to create server FIFO");
@@ -31,6 +58,9 @@ int main() {
     return 1;
   }
 
+  printf("Server started with PID %d\n", getpid());
+
+  pids      = pid_array_create(10);
   last_read = time(NULL);
   while (1) {
     server_connect_request_t request = {0};
@@ -40,7 +70,7 @@ int main() {
     return_value = read(server_fifo_fd, &request, sizeof(request));
 
     if (return_value == -1 || return_value == 0) {
-      if (time(NULL) - last_read > 3) {
+      if (time(NULL) - last_read > 15) {
         errno = ETIMEDOUT;
         perror("Server waited for too long");
         break;
@@ -61,8 +91,10 @@ int main() {
       handle_client(request);
       return 0;
     }
+    pid_array_push(&pids, child_pid);
   }
   close(server_fifo_fd);
+  pid_array_map(pids, kill_kids);
   pid_array_destroy(pids);
   unlink(SERVER_FIFO_PATH);
 

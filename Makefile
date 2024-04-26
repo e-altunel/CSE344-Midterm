@@ -1,9 +1,9 @@
 # Compilers 
 CC = gcc
-CCFLAGS = -Werror -Wall -g -Wextra -pedantic -ansi
+CCFLAGS = -Werror -Wall -g -Wextra -pedantic -std=c11
 AR = ar
 ARFLAGS = rcs
-MEMCHECK = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --trace-children=yes
+MEMCHECK = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --trace-children=yes -q
 
 # Directories
 SRCDIR = src
@@ -42,7 +42,7 @@ memcheck_server: server
 
 memcheck_client: client
 	@echo $(YELLOW)"Running client with valgrind..."$(NC)
-	@$(MEMCHECK) $(CLIENT_TARGET)
+	@$(MEMCHECK) $(CLIENT_TARGET) $(ARGS)
 
 $(SERVER_TARGET): $(SERVER_OBJ) $(LIBS)
 	@echo $(GREEN)"Linking server..."$(NC)
