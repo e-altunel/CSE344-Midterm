@@ -1,6 +1,6 @@
 # Compilers 
 CC = gcc
-CCFLAGS = -Werror -Wall -g -Wextra -pedantic -std=c11
+CCFLAGS = -Werror -Wall -g -Wextra -pedantic -std=c89 -D_POSIX_C_SOURCE=200112L
 AR = ar
 ARFLAGS = rcs
 MEMCHECK = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --trace-children=yes -q
@@ -11,56 +11,33 @@ INCDIR = inc
 OBJDIR = obj
 BINDIR = bin
 LIBDIR = lib
+MAINDIR = main
 
 # Names
 LIBNAME = cse344midterm
-SERVER_TARGET = $(BINDIR)/server.out
-SERVER_SRC = server.c
-SERVER_OBJ = $(OBJDIR)/server.o
-CLIENT_TARGET = $(BINDIR)/client.out
-CLIENT_SRC = client.c
-CLIENT_OBJ = $(OBJDIR)/client.o
 
 # Files
 SRCS = $(wildcard $(SRCDIR)/*.c)
 INCS = $(wildcard $(INCDIR)/*.h)
 OBJS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
 LIBS = $(LIBDIR)/lib$(LIBNAME).a
+MAINS = $(wildcard $(MAINDIR)/*.c)
+MAIN_O = $(patsubst $(MAINDIR)/%.c, $(OBJDIR)/%.o, $(MAINS))
+.PRECIOUS: $(MAIN_O)
+BINS = $(patsubst $(MAINDIR)/%.c, $(BINDIR)/%.out, $(MAINS))
 
 # Targets
-.PHONY: all clean re server client
+.PHONY: all clean re 
 
-all: server client
+all: $(BINS)
 
-server: $(SERVER_TARGET)
-
-client: $(CLIENT_TARGET)
-
-memcheck_server: server
-	@echo $(YELLOW)"Running server with valgrind..."$(NC)
-	@$(MEMCHECK) $(SERVER_TARGET)
-
-memcheck_client: client
-	@echo $(YELLOW)"Running client with valgrind..."$(NC)
-	@$(MEMCHECK) $(CLIENT_TARGET) $(ARGS)
-
-$(SERVER_TARGET): $(SERVER_OBJ) $(LIBS)
-	@echo $(GREEN)"Linking server..."$(NC)
+$(BINDIR)/%.out: $(OBJDIR)/%.o $(LIBS)
+	@echo $(GREEN)"Linking $<..."$(NC)
 	@mkdir -p $(BINDIR)
-	@$(CC) $(CCFLAGS) -o $@ $< -L$(LIBDIR) -l$(LIBNAME)
+	@$(CC) $(CCFLAGS) -o $@ -I$(INCDIR) $< $(LIBS)
 
-$(CLIENT_TARGET): $(CLIENT_OBJ) $(LIBS)
-	@echo $(GREEN)"Linking client..."$(NC)
-	@mkdir -p $(BINDIR)
-	@$(CC) $(CCFLAGS) -o $@ $< -L$(LIBDIR) -l$(LIBNAME) 
-
-$(SERVER_OBJ): $(SERVER_SRC)
-	@echo $(GREEN)"Compiling server..."$(NC)
-	@mkdir -p $(OBJDIR)
-	@$(CC) $(CCFLAGS) -c -o $@ -I$(INCDIR) $<
-
-$(CLIENT_OBJ): $(CLIENT_SRC)
-	@echo $(GREEN)"Compiling client..."$(NC)
+$(OBJDIR)/%.o: $(MAINDIR)/%.c $(LIBS)
+	@echo $(GREEN)"Compiling main files $<..."$(NC)
 	@mkdir -p $(OBJDIR)
 	@$(CC) $(CCFLAGS) -c -o $@ -I$(INCDIR) $<
 
