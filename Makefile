@@ -1,6 +1,6 @@
 # Compilers 
 CC = gcc
-CCFLAGS = -Werror -Wall -g -Wextra -pedantic -std=c99 -D_POSIX_C_SOURCE=200112L
+CCFLAGS = -O2 -Werror -Wall  -Wextra -pedantic -std=c99 -D_POSIX_C_SOURCE=200112L
 AR = ar
 ARFLAGS = rcs
 MEMCHECK = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --trace-children=yes -q
@@ -12,11 +12,13 @@ OBJDIR = obj
 BINDIR = bin
 LIBDIR = lib
 MAINDIR = main
-TESTMAINDIR = tester
-TESTSRCDIR = $(TESTMAINDIR)/src
-TESTINCDIR = $(TESTMAINDIR)/inc
-TESTOBJDIR = $(TESTMAINDIR)/obj
-TESTBINDIR = $(TESTMAINDIR)/bin
+TESTDIR = tester
+TESTMAINDIR = $(TESTDIR)/main
+TESTSRCDIR = $(TESTDIR)/src
+TESTINCDIR = $(TESTDIR)/inc
+TESTOBJDIR = $(TESTDIR)/obj
+TESTBINDIR = $(TESTDIR)/bin
+TESTLIBDIR = $(TESTDIR)/lib
 
 # Names
 LIBNAME = cse344midterm
@@ -30,11 +32,14 @@ MAINS = $(wildcard $(MAINDIR)/*.c)
 MAIN_O = $(patsubst $(MAINDIR)/%.c, $(OBJDIR)/%.o, $(MAINS))
 .PRECIOUS: $(MAIN_O)
 BINS = $(patsubst $(MAINDIR)/%.c, $(BINDIR)/%.out, $(MAINS))
+TESTLIB = $(TESTLIBDIR)/lib$(LIBNAME)_tester_lib.a
+TESTMAINS = $(wildcard $(TESTMAINDIR)/*.c)
 TESTSRCS = $(wildcard $(TESTSRCDIR)/*.c)
 TESTINCS = $(wildcard $(TESTINCDIR)/*.h)
 TESTOBJS = $(patsubst $(TESTSRCDIR)/%.c, $(TESTOBJDIR)/%.o, $(TESTSRCS))
-.PRECIOUS: $(TESTOBJS)
-TESTBINS = $(patsubst $(TESTSRCDIR)/%.c, $(TESTBINDIR)/%, $(TESTSRCS))
+TESTMAINOBJS = $(patsubst $(TESTMAINDIR)/%.c, $(TESTOBJDIR)/%.o, $(TESTMAINS))
+.PRECIOUS: $(TESTOBJS) $(TESTMAINOBJS)
+TESTBINS = $(patsubst $(TESTMAINDIR)/%.c, $(TESTBINDIR)/%, $(TESTMAINS))
 
 # Targets
 .PHONY: all clean re test_all
@@ -63,7 +68,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 
 clean:
 	@echo $(RED)"Cleaning..."$(NC)
-	@rm -rf $(BINDIR) $(OBJDIR) $(LIBDIR) $(TESTBINDIR) $(TESTOBJDIR)
+	@rm -rf $(BINDIR) $(OBJDIR) $(LIBDIR) $(TESTBINDIR) $(TESTOBJDIR) $(TESTLIBDIR)
 
 test_all: $(TESTBINS) $(LIBS)
 	@echo $(YELLOW)"Running tests..."$(NC)"\n" 
@@ -77,12 +82,22 @@ test_all: $(TESTBINS) $(LIBS)
 		echo ""; \
 	done
 
-$(TESTBINDIR)/%: $(TESTOBJDIR)/%.o $(LIBS) 
+$(TESTBINDIR)/%: $(TESTOBJDIR)/%.o $(LIBS) $(TESTLIB)
 	@echo $(GREEN)"Linking test $<..."$(NC)
 	@mkdir -p $(TESTBINDIR)
-	@$(CC) $(CCFLAGS) -o $@ -I$(INCDIR) -I$(TESTINCDIR) $< $(LIBS)
+	@$(CC) $(CCFLAGS) -o $@ -I$(INCDIR) -I$(TESTINCDIR) $< $(LIBS) $(TESTLIB)
+
+$(TESTLIB): $(TESTOBJS)
+	@echo $(YELLOW)"Creating test library..."$(NC)
+	@mkdir -p $(TESTLIBDIR)
+	@$(AR) $(ARFLAGS) $@ $^
 
 $(TESTOBJDIR)/%.o: $(TESTSRCDIR)/%.c $(LIBS) $(TESTINCS)
+	@echo $(GREEN)"Compiling test $<..."$(NC)
+	@mkdir -p $(TESTOBJDIR)
+	@$(CC) $(CCFLAGS) -c -o $@ -I$(INCDIR) -I$(TESTINCDIR) $<
+
+$(TESTOBJDIR)/%.o: $(TESTMAINDIR)/%.c $(LIBS) $(TESTLIB) $(TESTINCS) 
 	@echo $(GREEN)"Compiling test $<..."$(NC)
 	@mkdir -p $(TESTOBJDIR)
 	@$(CC) $(CCFLAGS) -c -o $@ -I$(INCDIR) -I$(TESTINCDIR) $<
