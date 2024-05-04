@@ -27,7 +27,7 @@
           "ignoreFailures": true
         }
       ],
-      "preLaunchTask": "Build server"
+      "preLaunchTask": "build"
     },
     {
       "name": "Client Debug",
@@ -52,7 +52,7 @@
           "ignoreFailures": true
         }
       ],
-      "preLaunchTask": "Build client"
+      "preLaunchTask": "build"
     }
   ]
 }
