@@ -2,7 +2,7 @@
   "tasks": [
     {
       "type": "cppbuild",
-      "label": "Build server",
+      "label": "build",
       "command": "/usr/bin/make",
       "options": {
         "cwd": "${workspaceFolder}"
