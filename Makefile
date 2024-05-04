@@ -43,9 +43,17 @@ TESTMAINOBJS = $(patsubst $(TESTMAINDIR)/%.c, $(TESTOBJDIR)/%.o, $(TESTMAINS))
 TESTBINS = $(patsubst $(TESTMAINDIR)/%.c, $(TESTBINDIR)/%, $(TESTMAINS))
 
 # Targets
-.PHONY: all clean re test_all
+.PHONY: all server client clean re test_all
 
 all: $(BINS)
+
+server: $(BINDIR)/server.out
+	@echo $(YELLOW)"Running server..."$(NC)
+	@${MEMCHECK} $< $(ARGS)
+
+client: $(BINDIR)/client.out
+	@echo $(YELLOW)"Running client..."$(NC)
+	@${MEMCHECK} $< $(ARGS)
 
 $(BINDIR)/%.out: $(OBJDIR)/%.o $(LIBS)
 	@echo $(GREEN)"Linking $<..."$(NC)
