@@ -1,6 +1,7 @@
 # Compilers 
 CC = gcc
-CCFLAGS = -O2 -Werror -Wall  -Wextra -pedantic -std=c99 -D_POSIX_C_SOURCE=200112L
+CCFLAGS = -O2 -Werror -Wall  -Wextra -pedantic -std=c89 -D_POSIX_C_SOURCE=200809L
+TESTCCFLAGS = -O2 -Werror -Wall  -Wextra -pedantic -std=c99 -D_POSIX_C_SOURCE=200809L -Wno-incompatible-pointer-types -Wno-unused-variable
 AR = ar
 ARFLAGS = rcs
 MEMCHECK = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --trace-children=yes -q
@@ -85,7 +86,7 @@ test_all: $(TESTBINS) $(LIBS)
 $(TESTBINDIR)/%: $(TESTOBJDIR)/%.o $(LIBS) $(TESTLIB)
 	@echo $(GREEN)"Linking test $<..."$(NC)
 	@mkdir -p $(TESTBINDIR)
-	@$(CC) $(CCFLAGS) -o $@ -I$(INCDIR) -I$(TESTINCDIR) $< $(LIBS) $(TESTLIB)
+	@$(CC) $(TESTCCFLAGS) -o $@ -I$(INCDIR) -I$(TESTINCDIR) $< $(LIBS) $(TESTLIB)
 
 $(TESTLIB): $(TESTOBJS)
 	@echo $(YELLOW)"Creating test library..."$(NC)
@@ -95,12 +96,12 @@ $(TESTLIB): $(TESTOBJS)
 $(TESTOBJDIR)/%.o: $(TESTSRCDIR)/%.c $(LIBS) $(TESTINCS)
 	@echo $(GREEN)"Compiling test $<..."$(NC)
 	@mkdir -p $(TESTOBJDIR)
-	@$(CC) $(CCFLAGS) -c -o $@ -I$(INCDIR) -I$(TESTINCDIR) $<
+	@$(CC) $(TESTCCFLAGS) -c -o $@ -I$(INCDIR) -I$(TESTINCDIR) $<
 
 $(TESTOBJDIR)/%.o: $(TESTMAINDIR)/%.c $(LIBS) $(TESTLIB) $(TESTINCS) 
 	@echo $(GREEN)"Compiling test $<..."$(NC)
 	@mkdir -p $(TESTOBJDIR)
-	@$(CC) $(CCFLAGS) -c -o $@ -I$(INCDIR) -I$(TESTINCDIR) $<
+	@$(CC) $(TESTCCFLAGS) -c -o $@ -I$(INCDIR) -I$(TESTINCDIR) $<
 
 re: clean all
 
