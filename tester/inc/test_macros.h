@@ -10,11 +10,18 @@ static int isPreviousTestPassed = 1;
     isPreviousTestPassed = 1;                                                                                          \
     fprintf(stdout, "\033[1;32m✓ \033[0m");                                                                            \
   }
-#define FAILED(format, ...)                                                                                            \
+#define FAILED()                                                                                                       \
   {                                                                                                                    \
     if (isPreviousTestPassed)                                                                                          \
       fprintf(stdout, "\n");                                                                                           \
-    fprintf(stderr, "\033[1;31mAssertion failed: %s:%d: " format "\033[0m\n", __FILE__, __LINE__, ##__VA_ARGS__);      \
+    fprintf(stderr, "\033[1;31mAssertion failed: %s:%d: \033[0m\n", __FILE__, __LINE__);                               \
+    fprintf(stderr, "\033[1;31mExpected: ");                                                                           \
+    PRINT(tmp_expected);                                                                                               \
+    fprintf(stderr, "\033[0m\n");                                                                                      \
+    fprintf(stderr, "\033[1;31mActual: ");                                                                             \
+    PRINT(tmp_actual);                                                                                                 \
+    fprintf(stderr, "\033[0m\n");                                                                                      \
+    isPreviousTestPassed = 0;                                                                                          \
   }
 
 #define TEST_START(func, ret, ...)                                                                                     \
@@ -43,7 +50,7 @@ static int isPreviousTestPassed = 1;
     tmp_actual = fun_ptr(__VA_ARGS__);                                                                                 \
     if (NOT_EQUAL(tmp_expected, tmp_actual))                                                                           \
     {                                                                                                                  \
-      FAILED("expected: " FORMAT_STRING ", actual: " FORMAT_STRING, tmp_expected, tmp_actual);                         \
+      FAILED();                                                                                                        \
       DESTROY(tmp_actual);                                                                                             \
       DESTROY(tmp_expected);                                                                                           \
       return 1;                                                                                                        \
