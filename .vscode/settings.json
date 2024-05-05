@@ -6,6 +6,11 @@
     "*.hpp": "cpp",
     "*.md": "markdown",
     "*.txt": "plaintext",
-    "vector": "c"
+    "vector": "c",
+    "system_error": "c",
+    "array": "c",
+    "string": "c",
+    "string_view": "c",
+    "chrono": "c"
   }
 }
